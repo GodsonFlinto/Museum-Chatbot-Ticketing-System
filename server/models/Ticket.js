@@ -5,33 +5,61 @@ const ticketSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
-    ticketType: {
+
+    museumId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Museum",
+      required: true,
+    },
+
+    museumName: {
       type: String,
-      enum: ["entry", "show", "exhibition"],
-      required: true
+      required: true,
     },
+
+    citizenType: {
+      type: String,
+      enum: ["indian", "foreigner"],
+      required: true,
+    },
+
+    ticketCategory: {
+      type: String,
+      enum: ["General", "Child", "Senior"],
+      required: true,
+    },
+
     date: {
       type: String,
-      required: true
+      required: true,
     },
+
     timeSlot: {
       type: String,
-      required: true
+      required: true,
     },
+
     quantity: {
       type: Number,
-      required: true
+      required: true,
     },
-    qrCode: {
-      type: String
+
+    amount: {
+      type: Number,
+      required: true,
     },
+
     status: {
-    type: String,
-    enum: ["pending", "confirmed", "used"],
-    default: "pending"
-  }
+      type: String,
+      enum: ["pending", "confirmed", "used"],
+      default: "pending",
+    },
+
+    qrCode: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

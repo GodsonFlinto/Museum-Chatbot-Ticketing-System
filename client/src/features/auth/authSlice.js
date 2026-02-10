@@ -21,11 +21,15 @@ const authSlice = createSlice({
     error: null,
   },
   reducers: {
-    logout: (state) => {
-      state.user = null;
-      localStorage.removeItem("user");
-    }
+  logout: (state) => {
+    state.user = null;
+    localStorage.removeItem("user");
+    state.loading = false;
   },
+  hydrateAuth: (state) => {
+    state.loading = false;
+  },
+},
   extraReducers: (builder) => {
     builder
       .addCase(login.pending, (state) => {
@@ -56,5 +60,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout } = authSlice.actions;
 export default authSlice.reducer;
+export const { logout, hydrateAuth } = authSlice.actions;

@@ -1,7 +1,11 @@
 import { useDispatch, useSelector } from "react-redux";
-import { sendMessage, addUserMessage } from "../features/chatbot/chatbotSlice";
+import {
+  sendMessage,
+  addBotMessageDirect,
+  addUserMessage,
+} from "../features/chatbot/chatbotSlice";
 import { startPayment } from "../features/payment/paymentSlice";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 import LanguageToggle from "./LanguageToggle";
 import { logout } from "../features/auth/authSlice";
@@ -9,59 +13,122 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 const Chatbot = () => {
-  const chatbotSession = useSelector((state) => state.chatbot.session.data);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const bottomRef = useRef(null);
+  const greetedRef = useRef(false);
 
-  useEffect(() => {
-    console.log("CHATBOT SESSION DATA:", chatbotSession);
-  }, []);
+  const { toggleTheme, theme } = useTheme();
+
+  const user = useSelector((state) => state.auth.user);
+  const activeMuseum = useSelector((state) => state.museum.activeMuseum);
+  const chatbotSession = useSelector((state) => state.chatbot.session);
+  const messages = useSelector((state) => state.chatbot.messages);
+
+  const museum =
+    activeMuseum || JSON.parse(localStorage.getItem("activeMuseum"));
 
   const [input, setInput] = useState("");
-  const dispatch = useDispatch();
-  const messages = useSelector((state) => state.chatbot.messages);
-  const bottomRef = useRef(null);
-  const { toggleTheme, theme } = useTheme();
-  const navigate = useNavigate();
 
-  // Auto scroll
+  /* 🔐 SAFETY */
+  useEffect(() => {
+    if (!user) navigate("/login");
+    if (!museum) navigate("/home");
+  }, [user, museum, navigate]);
+
+  /* 👋 GREETING + DATE INSTRUCTION (RUN ONCE) */
+  useEffect(() => {
+    if (!user || !museum) return;
+    if (greetedRef.current) return;
+
+    greetedRef.current = true;
+
+    dispatch(
+      addBotMessageDirect({
+        reply: `👋 Hi ${user.name}!
+
+Welcome to "${museum.name}" 🏛️  
+📍 ${museum.location}
+
+🎟 Ticket Prices:
+• Indians: ₹${museum.pricing.indian}
+• Foreigners: ₹${museum.pricing.foreigner}
+
+📅 Please enter the visit date in this format:
+👉 YYYY-MM-DD (example: 2026-02-10)`,
+      })
+    );
+  }, [user, museum, dispatch]);
+
+  /* 🔽 AUTO SCROLL */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  /* 💬 SEND MESSAGE */
   const handleSend = (text) => {
-    if (!text) return;
+    if (!text.trim()) return;
     dispatch(addUserMessage(text));
     dispatch(sendMessage(text));
     setInput("");
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/");
+  /* 📅 DATE VALIDATION */
+  const isValidDateFormat = (dateStr) => {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateStr)) return false;
+
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime());
   };
 
+  /* 💳 PAYMENT */
   const handlePayment = async () => {
-    const booking = chatbotSession;
+    try {
+      const { citizenType, ticketCategory, date, timeSlot, quantity } =
+        chatbotSession;
 
-    if (
-      !booking.ticketType ||
-      !booking.date ||
-      !booking.timeSlot ||
-      !booking.quantity
-    ) {
-      alert("Booking incomplete");
-      return;
+      if (!citizenType || !date || !timeSlot || !quantity) {
+        alert("❌ Booking details incomplete");
+        return;
+      }
+
+      if (!isValidDateFormat(date)) {
+        alert(
+          "❌ Invalid date format.\nPlease use YYYY-MM-DD (example: 2026-02-10)"
+        );
+        return;
+      }
+
+      const pricePerTicket = museum.pricing[citizenType];
+      const totalAmount = pricePerTicket * quantity;
+
+      const ticketRes = await api.post("/tickets/book", {
+        museumId: museum._id,
+        museumName: museum.name,
+        citizenType,
+        ticketCategory,
+        date,
+        timeSlot,
+        quantity,
+        amount: totalAmount,
+      });
+
+      dispatch(
+        startPayment({
+          ticketId: ticketRes.data._id,
+          amount: totalAmount,
+        })
+      );
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert("Payment failed");
     }
+  };
 
-    // 1️⃣ Create ticket
-    const ticketRes = await api.post("/tickets/book", booking);
-
-    // 2️⃣ Start payment
-    dispatch(
-      startPayment({
-        ticketId: ticketRes.data._id,
-        amount: booking.quantity * 200,
-      })
-    );
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -206,9 +273,7 @@ const Chatbot = () => {
                 textAlign: "center",
               }}
             >
-              <span style={{ fontSize: "48px", marginBottom: "16px" }}>
-                💬
-              </span>
+              <span style={{ fontSize: "48px", marginBottom: "16px" }}>💬</span>
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>
                 Start a conversation
               </h3>
@@ -219,7 +284,10 @@ const Chatbot = () => {
           )}
 
           {messages.map((msg, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div
+              key={i}
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            >
               {/* USER MESSAGE */}
               {msg.text && (
                 <div
@@ -416,12 +484,8 @@ const Chatbot = () => {
                 transition: "border-color 0.2s ease",
               }}
               onKeyDown={(e) => e.key === "Enter" && handleSend(input)}
-              onFocus={(e) =>
-                (e.target.style.borderColor = "var(--primary)")
-              }
-              onBlur={(e) =>
-                (e.target.style.borderColor = "var(--border)")
-              }
+              onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
+              onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
             />
             <button
               onClick={() => handleSend(input)}
@@ -432,9 +496,7 @@ const Chatbot = () => {
                 height: "48px",
                 borderRadius: "var(--radius)",
                 border: "none",
-                background: input.trim()
-                  ? "var(--primary)"
-                  : "var(--muted)",
+                background: input.trim() ? "var(--primary)" : "var(--muted)",
                 color: "#fff",
                 cursor: input.trim() ? "pointer" : "not-allowed",
                 fontSize: "18px",
@@ -449,8 +511,7 @@ const Chatbot = () => {
                 (e.target.style.background = "var(--primary-dark)")
               }
               onMouseLeave={(e) =>
-                input.trim() &&
-                (e.target.style.background = "var(--primary)")
+                input.trim() && (e.target.style.background = "var(--primary)")
               }
             >
               ➤

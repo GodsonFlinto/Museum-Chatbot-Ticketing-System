@@ -1,89 +1,90 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../services/api";
-
-/**
- * Send message to backend chatbot
- * Backend returns: { reply, options?, action?, data? }
- */
-export const sendMessage = createAsyncThunk(
-  "chatbot/sendMessage",
-  async (message, { getState }) => {
-    const language = getState().chatbot.language || "en";
-
-    const res = await api.post("/chatbot/message", {
-      message,
-      language
-    });
-
-    return res.data;
-  }
-);
+import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   messages: [],
-  language: "en",
-
-  // 🔥 SINGLE SOURCE OF TRUTH FOR BOOKING
+  step: 0,
   session: {
-    data: {
-      ticketType: null,
-      date: null,
-      timeSlot: null,
-      quantity: null
-    }
-  }
+    citizenType: null, // indian | foreigner
+    ticketCategory: null, // General | Student | Senior Citizen
+    date: null,
+    timeSlot: null,
+    quantity: null,
+  },
 };
 
 const chatbotSlice = createSlice({
   name: "chatbot",
   initialState,
-
   reducers: {
-    // Store user message (UI only)
     addUserMessage: (state, action) => {
       state.messages.push({ text: action.payload });
     },
 
-    setLanguage: (state, action) => {
-      state.language = action.payload;
+    addBotMessageDirect: (state, action) => {
+      state.messages.push(action.payload);
     },
 
-    // Reset everything (optional)
-    resetChatbot: (state) => {
-      state.messages = [];
-      state.session.data = {
-        ticketType: null,
-        date: null,
-        timeSlot: null,
-        quantity: null
-      };
-    }
-  },
+    resetChatbot: () => initialState,
 
-  extraReducers: (builder) => {
-    builder.addCase(sendMessage.fulfilled, (state, action) => {
-      const payload = action.payload;
+    sendMessage: (state, action) => {
+      const userInput = action.payload;
 
-          console.log("CHATBOT API PAYLOAD:", action.payload);
+      switch (state.step) {
+        // STEP 0 → Ask visitor type
+        case 0:
+          state.messages.push({
+            reply: "Select citizen type",
+            options: ["Indian", "Foreigner"],
+          });
+          state.step = 1;
+          break;
 
-      // 1️⃣ Store bot reply (UI)
-      state.messages.push(payload);
+        case 1:
+          state.session.citizenType = userInput.toLowerCase(); // indian / foreigner
+          state.messages.push({
+            reply: "Select ticket category",
+            options: ["General", "Child", "Senior"],
+          });
+          state.step = 2;
+          break;
 
-      // 2️⃣ 🔥 STORE BOOKING DATA (THIS FIXES EVERYTHING)
-      if (payload.data) {
-        state.session.data = {
-          ...state.session.data,
-          ...payload.data
-        };
+        case 2:
+          state.session.ticketCategory = userInput;
+          state.messages.push({ reply: "Select visit date" });
+          state.step = 3;
+          break;
+
+        case 3:
+          state.session.date = userInput;
+          state.messages.push({
+            reply: "Choose a time slot",
+            options: ["10:00 AM", "1:00 PM", "4:00 PM"],
+          });
+          state.step = 4;
+          break;
+
+        case 4:
+          state.session.timeSlot = userInput;
+          state.messages.push({ reply: "How many tickets do you need?" });
+          state.step = 5;
+          break;
+
+        case 5:
+          state.session.quantity = Number(userInput);
+          state.messages.push({
+            reply: "Booking complete. Proceed to payment.",
+            action: "PAYMENT",
+          });
+          state.step = 6;
+          break;
+        default:
+          break;
       }
-    });
-  }
+    },
+  },
 });
 
-export const {
-  addUserMessage,
-  setLanguage,
-  resetChatbot
-} = chatbotSlice.actions;
+export const { addUserMessage, addBotMessageDirect, sendMessage, resetChatbot } =
+  chatbotSlice.actions;
 
 export default chatbotSlice.reducer;

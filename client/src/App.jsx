@@ -6,13 +6,21 @@ import Scanner from "./pages/Scanner";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import AdminLogin from "./admin/pages/AdminLogin";
+import Dashboard from "../src/admin/pages/Dashboard";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import AdminRoute from "./admin/routes/AdminRoute";
+import Bookings from "./admin/pages/Bookings";
+import Payments from "./admin/pages/Payments";
+import Users from "./admin/pages/Users";
+import Chatbot from "./admin/pages/Chatbot";
+import Museums from "./admin/pages/Museums";
 
 function App() {
   return (
     <BrowserRouter>
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -25,15 +33,16 @@ function App() {
       />
       <Routes>
         {/* Default */}
+        <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
 
         {/* Public */}
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
         {/* Protected */}
         <Route
-          path="/chat"
+          path="/chatbot"
           element={
             <ProtectedRoute>
               <ChatbotPage />
@@ -41,10 +50,7 @@ function App() {
           }
         />
 
-        <Route
-          path="/payment-success"
-          element={<PaymentSuccess />}
-        />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
 
         <Route
           path="/scanner"
@@ -55,8 +61,59 @@ function App() {
           }
         />
 
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminRoute>
+              <Dashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/bookings"
+          element={
+            <AdminRoute>
+              <Bookings />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/payments"
+          element={
+            <AdminRoute>
+              <Payments />
+            </AdminRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <Users />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/chatbot"
+          element={
+            <AdminRoute>
+              <Chatbot />
+            </AdminRoute>
+          }
+        />
+
+        <Route
+          path="/admin/museums"
+          element={
+            <AdminRoute>
+              <Museums />
+            </AdminRoute>
+          }
+        />
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/chat" />} />
+        {/* <Route path="*" element={<Navigate to="/chat" />} /> */}
       </Routes>
     </BrowserRouter>
   );
