@@ -10,10 +10,6 @@ const HomePage = () => {
   const [selectedMuseum, setSelectedMuseum] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [language, setLanguage] = useState("en");
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [quizStep, setQuizStep] = useState(0);
-  const [quizAnswers, setQuizAnswers] = useState({});
-  const [recommendations, setRecommendations] = useState(null);
   const [translatedContent, setTranslatedContent] = useState({});
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -183,7 +179,7 @@ const HomePage = () => {
             margin: 0,
             fontSize: "24px",
             fontWeight: "800",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "linear-gradient(180deg, #1a202c 0%, #2d3748 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             letterSpacing: "-0.5px"
@@ -216,7 +212,7 @@ const HomePage = () => {
       {/* HERO SECTION */}
       <div style={{
         padding: "100px 40px",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "linear-gradient(180deg, #1a202c 0%, #2d3748 100%)",
         color: "white",
         textAlign: "center",
         position: "relative",
